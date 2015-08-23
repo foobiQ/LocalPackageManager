@@ -5,6 +5,7 @@
 import argparse
 import json
 import os
+import sys
 import stat
 import subprocess
 import tarfile
@@ -14,7 +15,7 @@ from urlparse import urljoin
 import re
 
 
-emptyConfig = {'packageManagerDir': '~/local/packageManager',
+_emptyConfig = {'packageManagerDir': '~/local/packageManager',
         'packageRepositoryURL': 'http://',
         'installationEnvironmentVariables': {'INSTALL_PREFIX': '~/local'},
         }
@@ -64,8 +65,8 @@ class Package(object):
         elif self.packageType == 'meta':
             pass
         elif self.packageType == 'git':
+            # TODO
             pass
-            #raise NotImplementedError
         else:
             raise ValueError("unknown package type {}".format(self.packageType))
 
@@ -119,12 +120,9 @@ class Package(object):
             pass
         elif self.packageType == 'git':
             # TODO
-            pass
+            raise NotImplementedError
         else:
             raise ValueError("unknown package type {}".format(self.packageType))
-
-    def downloadSource(self, sourcesPath):
-        raise NotImplementedError
 
 
 class PackageManager(object):
@@ -135,6 +133,12 @@ class PackageManager(object):
         self._sourcesPath = os.path.join(self._basePath, _sourcesDir)
         self._installScriptsPath = os.path.join(self._basePath, _installScriptsDir)
         self._buildPath = os.path.join(self._basePath, _buildDir)
+
+        # create directories if they don't exist
+        for d in [self._availablePackagesPath, self._installedPackagesPath, \
+                self._sourcesPath, self._installScriptsPath, self._buildPath]:
+            if not os.path.isdir(d):
+                os.makedirs(d)
 
         self._installEnvs = config['installationEnvironmentVariables']
         self.packageRepoURL = config['packageRepositoryURL']
@@ -170,17 +174,20 @@ class PackageManager(object):
     def installPackages(self, packageNames):
         packagesToInstall = []
         for packageName in packageNames:
-            if packageName in self._installedPackages.keys():
-                print "Package '{0.name}' is already installed in version {0.version}"\
-                        .format(self._installedPackages[packageName])
-            elif packageName in self._availablePackages.keys():
-                package = self._availablePackages[packageName]
-                packageDependencies = [package] + self._getDependencies(package)
-                for p in reversed(packageDependencies):
-                    if p not in self._installedPackages.values() and p not in packagesToInstall:
-                        packagesToInstall = [p] + packagesToInstall
-            else:
+            if packageName not in self._availablePackages.keys():
                 print "Package '{}' is not available".format(packageName)
+                continue
+            package = self._availablePackages[packageName]
+            if packageName in self._installedPackages.keys():
+                installedPackage = self._installedPackages[packageName]
+                if not package.version > installedPackage.version:
+                    print "Package '{0.name}' is already installed in version {0.version}. " \
+                            "No newer version is available.".format(self._installedPackages[packageName])
+                    continue
+            packageDependencies = [package] + self._getDependencies(package)
+            for p in reversed(packageDependencies):
+                if p not in self._installedPackages.values() and p not in packagesToInstall:
+                    packagesToInstall = [p] + packagesToInstall
 
         if packagesToInstall:
             print "The following packages will be installed to satisfy dependencies:"
@@ -276,8 +283,15 @@ def main():
     args = argParser.parse_args()
 
     # read config
-    # TODO check if config file exists, write template and exit if not
-    with open(os.path.expanduser(args.config)) as f:
+    configFile = os.path.expanduser(args.config)
+    if not os.path.isfile(configFile):
+        # config file doesn't exists, write template and exit
+        print "No package manager config found at '{0}'. I have written a template. " \
+                "Please edit it at '{0}'.".format(configFile)
+        with open(configFile, 'w') as f:
+            json.dump(_emptyConfig, f, sort_keys=True, indent=4, separators=(',', ': '))
+        sys.exit(1)
+    with open(configFile) as f:
         pmConfig = json.load(f)
 
     pm = PackageManager(pmConfig)
