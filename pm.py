@@ -28,6 +28,7 @@ _buildDir = 'build'
 
 
 class PackageError(StandardError): pass
+class PackageManagerError(StandardError): pass
 
 
 class Version(object):
@@ -90,26 +91,25 @@ class Package(object):
 
     def _unpackSource(self, sourcesPath, buildPath):
         sourceFile = os.path.join(sourcesPath, self.sourceFile)
-        if not os.path.isfile(sourceFile):
-            raise PackageError("Source file '{}' of package '{}' doesn't exist".\
-                    format(sourceFile, self))
         unpackTo = os.path.join(buildPath, self.name)
         if os.path.isdir(unpackTo):
             shutil.rmtree(unpackTo)
         os.makedirs(unpackTo)
-        with tarfile.open(sourceFile) as tf:
-            tf.extractall(path=unpackTo)
+        try:
+            with tarfile.open(sourceFile) as tf:
+                tf.extractall(path=unpackTo)
+        except OSError as e:
+            raise PackageError("Error while unpacking source file: {}".format(sourceFile))
 
     def _runInstallScript(self, buildPath, installScriptsPath, environmentVariables):
         installScript = os.path.abspath(os.path.join(installScriptsPath, self.installScript))
-        if not os.path.isfile(installScript):
-            raise PackageError("Installation script '{}' of package '{}' doesn't exist".\
-                    format(installScript, self))
         unpackedSource = os.path.join(buildPath, self.name)
         try:
             subprocess.check_call([installScript], cwd=unpackedSource, env=environmentVariables)
         except OSError as e:
             raise PackageError("Can not call installation script: {}".format(e))
+        except subprocess.CalledProcessError as e:
+            raise PackageError("Error in installation script: {}".format(e))
 
     def install(self, sourcesPath, installScriptsPath, buildPath, environmentVariables):
         print "\n--- installing {} ---".format(self)
@@ -160,7 +160,8 @@ class PackageManager(object):
             try:
                 dependency = self._availablePackages[dependencyName]
             except KeyError:
-                raise PackageError("Can not resolve dependency '{}'".format(dependencyName))
+                raise PackageManagerError("Can not resolve dependency '{}' of package {}"\
+                        .format(dependencyName, package))
             allDependencies.append(dependency)
             allDependencies += self._getDependencies(dependency)
         return allDependencies
@@ -203,8 +204,13 @@ class PackageManager(object):
                 print
                 print "=== installing packages ==="
                 for p in reversed(packagesToInstall):
-                    p.install(self._sourcesPath, self._installScriptsPath, self._buildPath, \
-                            self._installEnvs)
+                    # install package
+                    try:
+                        p.install(self._sourcesPath, self._installScriptsPath, self._buildPath, \
+                                self._installEnvs)
+                    except PackageError as e:
+                        raise PackageManagerError("Error while installing {}: {}".format(p, e))
+                    # copy config file to installed packages directory
                     fromPath = os.path.join(self._availablePackagesPath, p.configFile)
                     toPath = os.path.join(self._installedPackagesPath, p.configFile)
                     shutil.copy(fromPath, toPath)
@@ -298,7 +304,11 @@ def main():
 
     if args.command == 'install':
         if len(args.packages) > 0:
-            pm.installPackages(args.packages)
+            try:
+                pm.installPackages(args.packages)
+            except PackageManagerError as e:
+                print >> sys.stderr, e
+                sys.exit(-1)
         else:
             argParser.error('No packages to install provided')
     elif args.command == 'update':
