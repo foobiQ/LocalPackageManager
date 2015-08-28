@@ -260,8 +260,7 @@ class PackageManager(object):
         availablePackagesURL = urljoin(self.packageRepoURL, _availablePackagesDir + '/')
         availablePackagesPath = urlopen(availablePackagesURL)
         availablePackagesHTML = availablePackagesPath.read().decode('utf-8')
-        packageFilePattern = re.compile('".*\.json"')
-
+        packageFilePattern = re.compile('"[^"]+\.json"')
         packageFileList = map(lambda p: p.strip('"'), packageFilePattern.findall(availablePackagesHTML))
         for packageFileName in packageFileList:
             print "downloading {0}".format(packageFileName)
