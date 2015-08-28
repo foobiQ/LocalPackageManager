@@ -10,7 +10,7 @@ import stat
 import subprocess
 import tarfile
 import shutil
-from urllib2 import urlopen
+from urllib2 import urlopen, HTTPError
 from urlparse import urljoin
 import re
 
@@ -219,7 +219,10 @@ class PackageManager(object):
                     shutil.copy(fromPath, toPath)
 
     def _downloadFile(self, url, destination, executable=False):
-        remote = urlopen(url)
+        try:
+            remote = urlopen(url)
+        except HTTPError as e:
+            raise PackageManagerError("can not download {0}: {1}".format(url, e))
         try:
             with open(destination, 'w') as local:
                 local.write(remote.read())
