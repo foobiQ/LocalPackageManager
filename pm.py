@@ -17,7 +17,7 @@ import re
 
 _emptyConfig = {'packageManagerDir': '~/local/packageManager',
         'packageRepositoryURL': 'http://',
-        'installationEnvironmentVariables': {'INSTALL_PREFIX': '~/local'},
+        'installationEnvironmentVariables': {'LPM_INSTALL_PREFIX': '~/local'},
         }
 
 _availablePackagesDir = 'availablePackages'
@@ -107,8 +107,10 @@ class Package(object):
     def _runInstallScript(self, buildPath, installScriptsPath, environmentVariables):
         installScript = os.path.abspath(os.path.join(installScriptsPath, self.installScript))
         unpackedSource = os.path.join(buildPath, self.name)
+	env = os.environ
+	env.update(environmentVariables)
         try:
-            subprocess.check_call([installScript], cwd=unpackedSource, env=environmentVariables)
+            subprocess.check_call([installScript], cwd=unpackedSource, env=env)
         except OSError as e:
             raise PackageError("Can not call installation script: {0}".format(e))
         except subprocess.CalledProcessError as e:
