@@ -1,5 +1,5 @@
 # LocalPackageManager
-Python2 based package manager for local installations
+Python2.6 based package manager for local installations
 
 # Package manager server directory structure
 

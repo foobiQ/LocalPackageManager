@@ -1,8 +1,8 @@
 #!/usr/bin/env python2
 
-""" Python2 based package manager. """
+""" Python 2.6 based package manager. """
 
-import argparse
+import optparse
 import json
 import os
 import sys
@@ -69,10 +69,10 @@ class Package(object):
             # TODO
             pass
         else:
-            raise ValueError("unknown package type {}".format(self.packageType))
+            raise ValueError("unknown package type {0}".format(self.packageType))
 
     def __str__(self):
-        return '{} ({})'.format(self.name, self.version)
+        return '{0} ({1})'.format(self.name, self.version)
 
     def __eq__(self, other):
         if not isinstance(other, Package):
@@ -96,10 +96,13 @@ class Package(object):
             shutil.rmtree(unpackTo)
         os.makedirs(unpackTo)
         try:
-            with tarfile.open(sourceFile) as tf:
-                tf.extractall(path=unpackTo)
+            tf = tarfile.open(sourceFile)
         except OSError as e:
-            raise PackageError("Error while unpacking source file: {}".format(sourceFile))
+            raise PackageError("Error while unpacking source file: {0}".format(sourceFile))
+        try:
+            tf.extractall(path=unpackTo)
+        finally:
+            tf.close()
 
     def _runInstallScript(self, buildPath, installScriptsPath, environmentVariables):
         installScript = os.path.abspath(os.path.join(installScriptsPath, self.installScript))
@@ -107,12 +110,12 @@ class Package(object):
         try:
             subprocess.check_call([installScript], cwd=unpackedSource, env=environmentVariables)
         except OSError as e:
-            raise PackageError("Can not call installation script: {}".format(e))
+            raise PackageError("Can not call installation script: {0}".format(e))
         except subprocess.CalledProcessError as e:
-            raise PackageError("Error in installation script: {}".format(e))
+            raise PackageError("Error in installation script: {0}".format(e))
 
     def install(self, sourcesPath, installScriptsPath, buildPath, environmentVariables):
-        print "\n--- installing {} ---".format(self)
+        print "\n--- installing {0} ---".format(self)
         if self.packageType == 'archive':
             self._unpackSource(sourcesPath, buildPath)
             self._runInstallScript(buildPath, installScriptsPath, environmentVariables)
@@ -122,7 +125,7 @@ class Package(object):
             # TODO
             raise NotImplementedError
         else:
-            raise ValueError("unknown package type {}".format(self.packageType))
+            raise ValueError("unknown package type {0}".format(self.packageType))
 
 
 class PackageManager(object):
@@ -160,7 +163,7 @@ class PackageManager(object):
             try:
                 dependency = self._availablePackages[dependencyName]
             except KeyError:
-                raise PackageManagerError("Can not resolve dependency '{}' of package {}"\
+                raise PackageManagerError("Can not resolve dependency '{0}' of package {1}"\
                         .format(dependencyName, package))
             allDependencies.append(dependency)
             allDependencies += self._getDependencies(dependency)
@@ -176,7 +179,7 @@ class PackageManager(object):
         packagesToInstall = []
         for packageName in packageNames:
             if packageName not in self._availablePackages.keys():
-                print "Package '{}' is not available".format(packageName)
+                print "Package '{0}' is not available".format(packageName)
                 continue
             package = self._availablePackages[packageName]
             if packageName in self._installedPackages.keys():
@@ -193,7 +196,7 @@ class PackageManager(object):
         if packagesToInstall:
             print "The following packages will be installed to satisfy dependencies:"
             for s in packagesToInstall:
-                print "  {}".format(s)
+                print "  {0}".format(s)
             print
             doIt = raw_input("are you sure? [y/n]\n")
             if doIt.lower() == 'y':
@@ -209,7 +212,7 @@ class PackageManager(object):
                         p.install(self._sourcesPath, self._installScriptsPath, self._buildPath, \
                                 self._installEnvs)
                     except PackageError as e:
-                        raise PackageManagerError("Error while installing {}: {}".format(p, e))
+                        raise PackageManagerError("Error while installing {0}: {1}".format(p, e))
                     # copy config file to installed packages directory
                     fromPath = os.path.join(self._availablePackagesPath, p.configFile)
                     toPath = os.path.join(self._installedPackagesPath, p.configFile)
@@ -233,7 +236,7 @@ class PackageManager(object):
             # source file
             try:
                 sourceFile = package.sourceFile
-                print "downloading sources of {}".format(package)
+                print "downloading sources of {0}".format(package)
                 sourceFileURL = urljoin(sourcesDirURL, sourceFile)
                 localSourceFilePath = os.path.join(self._sourcesPath, sourceFile)
                 self._downloadFile(sourceFileURL, localSourceFilePath)
@@ -242,7 +245,7 @@ class PackageManager(object):
             # install script
             try:
                 installScript = package.installScript
-                print "downloading install script of {}".format(package)
+                print "downloading install script of {0}".format(package)
                 installScriptURL = urljoin(installScriptsDirURL, installScript)
                 localScriptPath = os.path.join(self._installScriptsPath, installScript)
                 self._downloadFile(installScriptURL, localScriptPath, executable=True)
@@ -258,7 +261,7 @@ class PackageManager(object):
 
         packageFileList = map(lambda p: p.strip('"'), packageFilePattern.findall(availablePackagesHTML))
         for packageFileName in packageFileList:
-            print "downloading {}".format(packageFileName)
+            print "downloading {0}".format(packageFileName)
             packageFileURL = urljoin(availablePackagesURL, packageFileName)
             localFile = os.path.join(self._availablePackagesPath, packageFileName)
             self._downloadFile(packageFileURL, localFile)
@@ -279,17 +282,21 @@ class PackageManager(object):
 
 def main():
     supportedCommands = ['install', 'update', 'upgrade']
-    argParser = argparse.ArgumentParser(description=__doc__, \
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    argParser.add_argument('command', choices=supportedCommands)
-    argParser.add_argument('packages', nargs='*', metavar='package', \
-            help="If command==install, the packages to be installed")
-    argParser.add_argument('-c', '--config', default='~/.pmconfig.json', \
-            help="The package manager configuration file.")
-    args = argParser.parse_args()
+    usage = "usage: %prog [options] {{{0}}} [package [package] ...]"\
+            .format(', '.join(supportedCommands))
+    optParser = optparse.OptionParser(usage=usage, description=__doc__)
+    optParser.add_option('-c', '--config', dest='config', default='~/.pmconfig.json', \
+            help="The package manager configuration file (default %default)")
+    (opts, args) = optParser.parse_args()
+
+    try:
+        command = args[0]
+        packages = args[1:]
+    except IndexError:
+        optParser.error("No command specified")
 
     # read config
-    configFile = os.path.expanduser(args.config)
+    configFile = os.path.expanduser(opts.config)
     if not os.path.isfile(configFile):
         # config file doesn't exists, write template and exit
         print "No package manager config found at '{0}'. I have written a template. " \
@@ -302,19 +309,22 @@ def main():
 
     pm = PackageManager(pmConfig)
 
-    if args.command == 'install':
-        if len(args.packages) > 0:
+    if command == 'install':
+        if packages:
             try:
-                pm.installPackages(args.packages)
+                pm.installPackages(packages)
             except PackageManagerError as e:
                 print >> sys.stderr, e
                 sys.exit(-1)
         else:
-            argParser.error('No packages to install provided')
-    elif args.command == 'update':
+            optParser.error("No packages to install provided")
+    elif command == 'update':
         pm.updateAvailablePackages()
-    elif args.command == 'upgrade':
+    elif command == 'upgrade':
         pm.upgradeInstalledPackages()
+
+    else:
+        optParser.error("Unsupported command: {0}".format(command))
 
 if __name__ == '__main__':
     main()
