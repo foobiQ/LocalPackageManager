@@ -26,6 +26,11 @@ _sourcesDir = 'sources'
 _installScriptsDir = 'installScripts'
 _buildDir = 'build'
 
+# read metadata from __init__.py
+_pmDir = os.path.dirname(os.path.realpath(__file__))
+_initFilePath = os.path.join(_pmDir, '__init__.py')
+with open(_initFilePath) as initFile:
+    _metadata = dict(re.findall("__([a-z]+)__ = '([^']+)'", initFile.read()))
 
 class PackageError(StandardError): pass
 class PackageManagerError(StandardError): pass
@@ -291,7 +296,13 @@ def main():
     optParser = optparse.OptionParser(usage=usage, description=__doc__)
     optParser.add_option('-c', '--config', dest='config', default='~/.pmconfig.json', \
             help="The package manager configuration file (default %default)")
+    optParser.add_option('--version', dest='printVersion', action="store_true", \
+            help="print the version and exit")
     (opts, args) = optParser.parse_args()
+
+    if opts.printVersion:
+        print _metadata['version']
+        sys.exit(0)
 
     try:
         command = args[0]
