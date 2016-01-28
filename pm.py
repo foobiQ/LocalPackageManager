@@ -190,23 +190,33 @@ class PackageManager(object):
         for p in sorted(self._installedPackages):
             print self._installedPackages[p]
 
-    def installPackages(self, packageNames):
+    def installPackages(self, packageNames, reinstall=False, reinstallDependencies=False):
+        """ Install the list of package names with dependencies.
+
+        """
         packagesToInstall = []
-        for packageName in packageNames:
+        for packageName in reversed(packageNames):
             if packageName not in self._availablePackages.keys():
                 print "Package '{0}' is not available".format(packageName)
                 continue
             package = self._availablePackages[packageName]
-            if packageName in self._installedPackages.keys():
+            # ignore if already in the install list
+            if package in packagesToInstall:
+                continue
+            # ignore and warn if already installed
+            # if reinstall is True don't check if the packet is already installed
+            if not reinstall and packageName in self._installedPackages.keys():
                 installedPackage = self._installedPackages[packageName]
                 if not package.version > installedPackage.version:
                     print "Package '{0.name}' is already installed in version {0.version}. " \
                             "No newer version is available.".format(self._installedPackages[packageName])
                     continue
-            packageDependencies = [package] + self._getDependencies(package)
-            for p in reversed(packageDependencies):
-                if p not in self._installedPackages.values() and p not in packagesToInstall:
-                    packagesToInstall = [p] + packagesToInstall
+            for p in reversed(self._getDependencies(package)):
+                if p not in packagesToInstall:
+                    # if reinstallDependencies is True don't check if the dependency is already installed
+                    if reinstallDependencies or p not in self._installedPackages.values():
+                        packagesToInstall = [p] + packagesToInstall
+            packagesToInstall = [package] + packagesToInstall
 
         if packagesToInstall:
             print "The following packages will be installed to satisfy dependencies:"
@@ -313,6 +323,10 @@ def main():
             help="The package manager configuration file (default %default)")
     optParser.add_option('--version', dest='printVersion', action="store_true", \
             help="print the version and exit")
+    optParser.add_option('--reinstall', dest='reinstall', action='store_true', default=False, \
+            help="Reinstall the package if it is already installed.")
+    optParser.add_option('--reinstall-deps', dest='reinstallDeps', action='store_true', default=False, \
+            help="Also reinstall already installed dependencies.")
     (opts, args) = optParser.parse_args()
 
     if opts.printVersion:
@@ -342,7 +356,8 @@ def main():
     if command == 'install':
         if packages:
             try:
-                pm.installPackages(packages)
+                pm.installPackages(packages, reinstall=opts.reinstall,
+                        reinstallDependencies=opts.reinstallDeps)
             except PackageManagerError as e:
                 print >> sys.stderr, e
                 sys.exit(-1)
