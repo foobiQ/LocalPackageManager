@@ -227,14 +227,21 @@ class PackageManager(object):
             # if reinstall is True don't check if the packet is already installed
             if not reinstall and packageName in self._installedPackages.keys():
                 installedPackage = self._installedPackages[packageName]
-                if not package.version > installedPackage.version:
-                    print "Package '{0.name}' is already installed in version {0.version}. " \
-                            "No newer version is available.".format(self._installedPackages[packageName])
-                    continue
+                print "Package '{0.name}' is already installed in version {0.version}.".format(installedPackage)
+                if package.version > installedPackage.version:
+                    print "Newer version ({}) is available. Please do update first.".format(package.version)
+                return
             for p in reversed(self._getDependencies(package)):
                 if p not in packagesToInstall:
                     # if reinstallDependencies is True don't check if the dependency is already installed
-                    if reinstallDependencies or p not in self._installedPackages.values():
+                    if reinstallDependencies:
+                        packagesToInstall = [p] + packagesToInstall
+                    elif p.name in self._installedPackages:
+                        installedPackage = self._installedPackages[p.name]
+                        if p.version > installedPackage.version:
+                            print "Newer version ({}) is available for {}. Please do update first.".format(p.version, p.name)
+                            return
+                    else:
                         packagesToInstall = [p] + packagesToInstall
             packagesToInstall = [package] + packagesToInstall
 
