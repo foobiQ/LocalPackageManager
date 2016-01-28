@@ -182,6 +182,20 @@ class PackageManager(object):
             allDependencies += self._getDependencies(dependency)
         return allDependencies
 
+    def _getInstalledDependings(self, package):
+        """ Return all packages which depend on package recursively as a list.
+        Directly depending packages are first, with indirectly depending
+        packages after those. Packages need to be rebuilt in normal order for
+        an upgrade. Duplicates are possible.
+
+        """
+        allDependings = []
+        for p in self._installedPackages.values():
+            if package.name in p.dependencies:
+                allDependings.append(p)
+                allDependings += self._getInstalledDependings(p)
+        return allDependings
+
     def getAvailablePackages(self):
         return self._availablePackages
 
@@ -309,16 +323,24 @@ class PackageManager(object):
         print "Done"
 
     def upgradeInstalledPackages(self):
-        raise NotImplementedError
-        for packageName in self._installedPackages:
-            installedPackage = self._installedPackages[packageName]
-            availablePackage = self._availablePackages[packageName]
+        packagesToUpgrade = []
+        for installedPackage in self._installedPackages.values():
+            availablePackage = self._availablePackages[installedPackage.name]
             if availablePackage.version > installedPackage.version:
-                availablePackage.install(self._sourcesPath, self._installScriptsPath, self._buildPath)
-                # check for installed packages that depend on it and need to be recompiled
-                for p in self._installedPackages:
-                    if packageName in p.dependencies:
-                        p.install(self._sourcesPath, self._installScriptsPath, self._buildPath)
+                packagesToUpgrade.append(installedPackage)
+        # reinstall installed packages that depend on the packages to be upgraded
+        packagesToReinstall = []
+        for package in packagesToUpgrade:
+            packagesToReinstall += self._getInstalledDependings(package)
+        # filter out duplicates
+        packageNamesToReinstall = []
+        for p in reversed(packagesToUpgrade + packagesToReinstall):
+            if p.name not in packageNamesToReinstall:
+                packageNamesToReinstall = [p.name] + packageNamesToReinstall
+        # reverse package list to update deepest dependency first and reinstall depending packages afterwards
+        packageNamesToReinstall.reverse()
+        # install them
+        self.installPackages(packageNamesToReinstall, reinstall=True)
 
 def main():
     supportedCommands = ['install', 'update', 'upgrade', 'listInstalled', 'listAvailable']
