@@ -182,6 +182,14 @@ class PackageManager(object):
     def getInstalledPackages(self):
         return self._installedPackages
 
+    def printAvailablePackages(self):
+        for p in sorted(self._availablePackages):
+            print self._availablePackages[p]
+
+    def printInstalledPackages(self):
+        for p in sorted(self._installedPackages):
+            print self._installedPackages[p]
+
     def installPackages(self, packageNames):
         packagesToInstall = []
         for packageName in packageNames:
@@ -290,7 +298,7 @@ class PackageManager(object):
                         p.install(self._sourcesPath, self._installScriptsPath, self._buildPath)
 
 def main():
-    supportedCommands = ['install', 'update', 'upgrade']
+    supportedCommands = ['install', 'update', 'upgrade', 'listInstalled', 'listAvailable']
     usage = "usage: %prog [options] {{{0}}} [package [package] ...]"\
             .format(', '.join(supportedCommands))
     optParser = optparse.OptionParser(usage=usage, description=__doc__)
@@ -337,6 +345,10 @@ def main():
         pm.updateAvailablePackages()
     elif command == 'upgrade':
         pm.upgradeInstalledPackages()
+    elif command == 'listInstalled':
+        pm.printInstalledPackages()
+    elif command == 'listAvailable':
+        pm.printAvailablePackages()
 
     else:
         optParser.error("Unsupported command: {0}".format(command))
