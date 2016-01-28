@@ -299,8 +299,15 @@ class PackageManager(object):
 
 def main():
     supportedCommands = ['install', 'update', 'upgrade', 'listInstalled', 'listAvailable']
-    usage = "usage: %prog [options] {{{0}}} [package [package] ...]"\
-            .format(', '.join(supportedCommands))
+    usage = ("usage: %prog [options] command [package [package] ...]\n"\
+              "\n"
+              "command can be one of:\n"
+              "  install        takes a list of packages to be installed\n"
+              "  update         updates the available package list\n"
+              "  upgrade        updates all installed packages to the available version\n"
+              "  listInstalled  lists all installed packages with their version\n"
+              "  listAvailable  lists all available packages with their version"
+              .format(', '.join(supportedCommands)))
     optParser = optparse.OptionParser(usage=usage, description=__doc__)
     optParser.add_option('-c', '--config', dest='config', default='~/.pmconfig.json', \
             help="The package manager configuration file (default %default)")
