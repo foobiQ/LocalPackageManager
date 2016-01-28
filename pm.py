@@ -219,10 +219,17 @@ class PackageManager(object):
             packagesToInstall = [package] + packagesToInstall
 
         if packagesToInstall:
-            print "The following packages will be installed to satisfy dependencies:"
-            for s in packagesToInstall:
-                print "  {0}".format(s)
+            print "The following actions will be done (in this order):"
+            for p in reversed(packagesToInstall):
+                if p.name not in self._installedPackages:
+                    print "  {} install version {}".format(p.name, p.version)
+                elif p in self._installedPackages.values():
+                    print "  {} reinstall version {}".format(p.name, p.version)
+                else:
+                    installedVersion = self._installedPackages[p.name].version
+                    print "  {} update from version {} to {}".format(p.name, installedVersion, p.version)
             print
+
             doIt = raw_input("are you sure? [y/n]\n")
             if doIt.lower() == 'y':
                 print
