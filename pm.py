@@ -165,6 +165,12 @@ class PackageManager(object):
         return packages
 
     def _getDependencies(self, package):
+        """ Return all dependencies of package recursively as a list. Direct
+        dependencies are first and dependencies of dependencies come after
+        those. The packages need to be installed in reversed order. Duplicates
+        are possible.
+
+        """
         allDependencies = []
         for dependencyName in package.dependencies:
             try:
