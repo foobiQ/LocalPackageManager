@@ -13,6 +13,7 @@ import shutil
 from urllib2 import urlopen, HTTPError
 from urlparse import urljoin
 import re
+import warnings
 
 
 _emptyConfig = {'packageManagerDir': '~/local/packageManager',
@@ -162,6 +163,9 @@ class PackageManager(object):
         for packageConfigFile in os.listdir(configsPath):
             if not packageConfigFile.startswith('.'):
                 p = Package.fromJsonFile(os.path.join(configsPath, packageConfigFile))
+                if p.name in packages:
+                    warnings.warn("Package {} from file {} overwrites previous definition of package." \
+                            .format(p.name, packageConfigFile))
                 packages[p.name] = p
         return packages
 
