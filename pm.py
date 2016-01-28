@@ -25,10 +25,11 @@ _installedPackagesDir = 'installedPackages'
 _sourcesDir = 'sources'
 _installScriptsDir = 'installScripts'
 _buildDir = 'build'
+_pmDir = 'pm'
 
 # read metadata from __init__.py
-_pmDir = os.path.dirname(os.path.realpath(__file__))
-_initFilePath = os.path.join(_pmDir, '__init__.py')
+_localPMDirPath = os.path.dirname(os.path.realpath(__file__))
+_initFilePath = os.path.join(_localPMDirPath, '__init__.py')
 with open(_initFilePath) as initFile:
     _metadata = dict(re.findall("__([a-z]+)__ = '([^']+)'", initFile.read()))
 
@@ -326,6 +327,21 @@ class PackageManager(object):
             localFile = os.path.join(self._availablePackagesPath, packageFileName)
             self._downloadFile(packageFileURL, localFile)
 
+        print
+        print "Check for new version of package manager"
+        remoteInitFileURL = urljoin(self.packageRepoURL, _pmDir + '/__init__.py')
+        remoteInitFilePath = urlopen(remoteInitFileURL)
+        remoteInitFile = remoteInitFilePath.read().decode('utf-8')
+        remoteMetadata = dict(re.findall("__([a-z]+)__ = '([^']+)'", remoteInitFile))
+        remoteVersion = Version(remoteMetadata['version'])
+        localVersion = Version(_metadata['version'])
+        if remoteVersion > localVersion:
+            print "New version {} available ({} currently installed). Please run 'pm.py selfUpgrade'." \
+                    .format(remoteVersion, localVersion)
+        else:
+            print "Most recent version installed"
+
+        print
         print "Done"
 
     def upgradeInstalledPackages(self):
@@ -348,14 +364,28 @@ class PackageManager(object):
         # install them
         self.installPackages(packageNamesToReinstall, reinstall=True)
 
+    def selfUpgrade(self):
+        print "Downloading package manager from server"
+        pmFilesURL = urljoin(self.packageRepoURL, _pmDir + '/')
+        pmFileListPath = urlopen(pmFilesURL)
+        pmFileListHTML = pmFileListPath.read().decode('utf-8')
+        pmFileList = re.findall('href="([^"]+\.py)"', pmFileListHTML)
+        pmFileList += ['README.md', 'LICENSE']
+        for pmFileName in pmFileList:
+            print "downloading {0}".format(pmFileName)
+            pmFileURL = urljoin(pmFilesURL, pmFileName)
+            localFile = os.path.join(_localPMDirPath, pmFileName)
+            self._downloadFile(pmFileURL, localFile)
+
 def main():
-    supportedCommands = ['install', 'update', 'upgrade', 'listInstalled', 'listAvailable']
+    supportedCommands = ['install', 'update', 'upgrade', 'selfUpgrade', 'listInstalled', 'listAvailable']
     usage = ("usage: %prog [options] command [package [package] ...]\n"\
               "\n"
               "command can be one of:\n"
               "  install        takes a list of packages to be installed\n"
               "  update         updates the available package list\n"
               "  upgrade        updates all installed packages to the available version\n"
+              "  selfupgrade    updates the package manager to the available version\n"
               "  listInstalled  lists all installed packages with their version\n"
               "  listAvailable  lists all available packages with their version"
               .format(', '.join(supportedCommands)))
@@ -408,6 +438,8 @@ def main():
         pm.updateAvailablePackages()
     elif command == 'upgrade':
         pm.upgradeInstalledPackages()
+    elif command == 'selfUpgrade':
+        pm.selfUpgrade()
     elif command == 'listInstalled':
         pm.printInstalledPackages()
     elif command == 'listAvailable':
