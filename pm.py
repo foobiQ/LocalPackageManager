@@ -76,10 +76,10 @@ class Package(object):
             # TODO
             pass
         else:
-            raise ValueError("unknown package type {0}".format(self.packageType))
+            raise ValueError("unknown package type {0.packageType}".format(self))
 
     def __str__(self):
-        return '{0} ({1})'.format(self.name, self.version)
+        return '{0.name} ({0.version})'.format(self)
 
     def __eq__(self, other):
         if not isinstance(other, Package):
@@ -134,7 +134,7 @@ class Package(object):
             # TODO
             raise NotImplementedError
         else:
-            raise ValueError("unknown package type {0}".format(self.packageType))
+            raise ValueError("unknown package type {0.packageType}".format(self))
 
 
 class PackageManager(object):
@@ -164,8 +164,8 @@ class PackageManager(object):
             if not packageConfigFile.startswith('.'):
                 p = Package.fromJsonFile(os.path.join(configsPath, packageConfigFile))
                 if p.name in packages:
-                    warnings.warn("Package {} from file {} overwrites previous definition of package." \
-                            .format(p.name, packageConfigFile))
+                    warnings.warn("Package {0.name} from file {1} overwrites previous definition of package." \
+                            .format(p, packageConfigFile))
                 packages[p.name] = p
         return packages
 
@@ -234,7 +234,7 @@ class PackageManager(object):
                 installedPackage = self._installedPackages[packageName]
                 print "Package '{0.name}' is already installed in version {0.version}.".format(installedPackage)
                 if package.version > installedPackage.version:
-                    print "Newer version ({}) is available. Please do update first.".format(package.version)
+                    print "Newer version ({0.version}) is available. Please do update first.".format(package)
                 return
             for p in reversed(self._getDependencies(package)):
                 if p not in packagesToInstall:
@@ -244,7 +244,7 @@ class PackageManager(object):
                     elif p.name in self._installedPackages:
                         installedPackage = self._installedPackages[p.name]
                         if p.version > installedPackage.version:
-                            print "Newer version ({}) is available for {}. Please do update first.".format(p.version, p.name)
+                            print "Newer version ({0.version}) is available for {0.name}. Please do update first.".format(p)
                             return
                     else:
                         packagesToInstall = [p] + packagesToInstall
@@ -254,12 +254,12 @@ class PackageManager(object):
             print "The following actions will be done (in this order):"
             for p in reversed(packagesToInstall):
                 if p.name not in self._installedPackages:
-                    print "  {} install version {}".format(p.name, p.version)
+                    print "  {0.name} install version {0.version}".format(p)
                 elif p in self._installedPackages.values():
-                    print "  {} reinstall version {}".format(p.name, p.version)
+                    print "  {0.name} reinstall version {0.version}".format(p)
                 else:
                     installedVersion = self._installedPackages[p.name].version
-                    print "  {} update from version {} to {}".format(p.name, installedVersion, p.version)
+                    print "  {0.name} update from version {1} to {0.version}".format(p, installedVersion)
             print
 
             doIt = raw_input("are you sure? [y/n]\n")
@@ -340,7 +340,7 @@ class PackageManager(object):
         remoteVersion = Version(remoteMetadata['version'])
         localVersion = Version(_metadata['version'])
         if remoteVersion > localVersion:
-            print "New version {} available ({} currently installed). Please run 'pm.py selfUpgrade'." \
+            print "New version {0} available ({1} currently installed). Please run 'pm.py selfUpgrade'." \
                     .format(remoteVersion, localVersion)
         else:
             print "Most recent version installed"
