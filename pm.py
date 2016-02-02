@@ -216,6 +216,23 @@ class PackageManager(object):
         for p in sorted(self._installedPackages):
             print self._installedPackages[p]
 
+    def searchPackages(self, packageNames):
+        foundPackages = []
+        # search packages in available pacakges
+        for sp in packageNames:
+            for ap in self._availablePackages:
+                if sp in ap:
+                    foundPackage = self._availablePackages[ap]
+                    foundPackages.append(foundPackage)
+
+        # print and check if any of them are already installed
+        for fp in foundPackages:
+            if fp.name in self._installedPackages:
+                installedVersion = self._installedPackages[fp.name].version
+                print "i {0} installed in version {1}".format(fp, installedVersion)
+            else:
+                print "  {0} not installed".format(fp)
+
     def installPackages(self, packageNames, reinstall=False, reinstallDependencies=False):
         """ Install the list of package names with dependencies.
 
@@ -391,6 +408,7 @@ def main():
             ('selfUpgrade', 'update the package manager to the available version'),
             ('listInstalled', 'list all installed packages with their version'),
             ('listAvailable', 'list all available packages with their version'),
+            ('search', 'search for a given list of packages'),
             ('listCommands', 'list the possible commands and exit'),
             ('help', 'show this help message and exit'),
             ])
@@ -457,6 +475,15 @@ def main():
         pm.printInstalledPackages()
     elif command == 'listAvailable':
         pm.printAvailablePackages()
+    elif command == 'search':
+        if packages:
+            try:
+                pm.searchPackages(packages)
+            except PackageManagerError as e:
+                print >> sys.stderr, e
+                sys.exit(-1)
+        else:
+            optParser.error("No packages to search for provided")
     elif command == 'help':
         optParser.print_help()
     elif command == 'listCommands':
