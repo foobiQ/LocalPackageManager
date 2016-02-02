@@ -218,11 +218,14 @@ class PackageManager(object):
 
     def printInstalledPackages(self):
         for p in sorted(self._installedPackages.values()):
-            availableVersion = self._availablePackages[p.name].version
-            if p.version == availableVersion:
-                print "i{0} {1} up to date".format(p.shortType, p)
-            else:
-                print "i{0} {1} newer version available ({2})".format(p.shortType, p, availableVersion)
+            try:
+                availableVersion = self._availablePackages[p.name].version
+                if p.version == availableVersion:
+                    print "i{0} {1} up to date".format(p.shortType, p)
+                else:
+                    print "i{0} {1} newer version available ({2})".format(p.shortType, p, availableVersion)
+            except KeyError as e:
+                print "i{0} {1} package deprecated".format(p.shortType, p)
 
     def searchPackages(self, packageNames):
         foundPackages = []
@@ -351,14 +354,16 @@ class PackageManager(object):
         availablePackagesPath = urlopen(availablePackagesURL)
         availablePackagesHTML = availablePackagesPath.read().decode('utf-8')
         packageFileList = re.findall('href="([^"]+\.json)"', availablePackagesHTML)
+        # delete current availalable packages
+        if os.path.isdir(self._availablePackagesPath):
+            shutil.rmtree(self._availablePackagesPath)
+        os.makedirs(self._availablePackagesPath)
         for packageFileName in packageFileList:
-            print "downloading {0}".format(packageFileName)
             packageFileURL = urljoin(availablePackagesURL, packageFileName)
             localFile = os.path.join(self._availablePackagesPath, packageFileName)
             self._downloadFile(packageFileURL, localFile)
 
-        print
-        print "Check for new version of package manager"
+        print "Checking for new version of package manager"
         remoteInitFileURL = urljoin(self.packageRepoURL, _pmDir + '/__init__.py')
         remoteInitFilePath = urlopen(remoteInitFileURL)
         remoteInitFile = remoteInitFilePath.read().decode('utf-8')
@@ -370,9 +375,6 @@ class PackageManager(object):
                     .format(remoteVersion, localVersion)
         else:
             print "Most recent version installed"
-
-        print
-        print "Done"
 
     def upgradeInstalledPackages(self):
         packagesToUpgrade = []
