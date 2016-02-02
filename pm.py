@@ -264,7 +264,8 @@ class PackageManager(object):
                 print "Package '{0.name}' is already installed in version {0.version}.".format(installedPackage)
                 if package.version > installedPackage.version:
                     print "Newer version ({0.version}) is available. Please do update first.".format(package)
-                return
+                    return
+                continue
             for p in reversed(self._getDependencies(package)):
                 if p not in packagesToInstall:
                     # if reinstallDependencies is True don't check if the dependency is already installed
