@@ -14,6 +14,7 @@ from urllib2 import urlopen, HTTPError
 from urlparse import urljoin
 import re
 import warnings
+from collections import OrderedDict
 
 
 _emptyConfig = {'packageManagerDir': '~/local/packageManager',
@@ -382,26 +383,34 @@ class PackageManager(object):
             self._downloadFile(pmFileURL, localFile)
 
 def main():
-    supportedCommands = ['install', 'update', 'upgrade', 'selfUpgrade', 'listInstalled', 'listAvailable']
-    usage = ("usage: %prog [options] command [package [package] ...]\n"\
+    # define supported commands
+    supportedCommands = OrderedDict([
+            ('install', 'install the provided list of packages'),
+            ('update', 'update the available package list'),
+            ('upgrade', 'update all installed packages to the available version'),
+            ('selfUpgrade', 'update the package manager to the available version'),
+            ('listInstalled', 'list all installed packages with their version'),
+            ('listAvailable', 'list all available packages with their version'),
+            ('listCommands', 'list the possible commands and exit'),
+            ('help', 'show this help message and exit'),
+            ])
+    usage = ("usage: %prog [options] command [package [package] ...]\n"
               "\n"
-              "command can be one of:\n"
-              "  install        takes a list of packages to be installed\n"
-              "  update         updates the available package list\n"
-              "  upgrade        updates all installed packages to the available version\n"
-              "  selfupgrade    updates the package manager to the available version\n"
-              "  listInstalled  lists all installed packages with their version\n"
-              "  listAvailable  lists all available packages with their version"
-              .format(', '.join(supportedCommands)))
+              "command can be one of:\n")
+    maxCmdLen = max(map(len, supportedCommands.keys()))
+    for cmd, desc in supportedCommands.items():
+        usage += ("  {0:<"+str(maxCmdLen)+"}  {1}\n").format(cmd, desc)
+
+    # configure program options
     optParser = optparse.OptionParser(usage=usage, description=__doc__)
     optParser.add_option('-c', '--config', dest='config', default='~/.pmconfig.json', \
-            help="The package manager configuration file (default %default)")
+            help="the package manager configuration file (default %default)")
     optParser.add_option('--version', dest='printVersion', action="store_true", \
-            help="print the version and exit")
+            help="print the version of the package manager and exit")
     optParser.add_option('--reinstall', dest='reinstall', action='store_true', default=False, \
-            help="Reinstall the package if it is already installed.")
+            help="reinstall the package if it is already installed.")
     optParser.add_option('--reinstall-deps', dest='reinstallDeps', action='store_true', default=False, \
-            help="Also reinstall already installed dependencies.")
+            help="also reinstall already installed dependencies.")
     (opts, args) = optParser.parse_args()
 
     if opts.printVersion:
@@ -448,6 +457,10 @@ def main():
         pm.printInstalledPackages()
     elif command == 'listAvailable':
         pm.printAvailablePackages()
+    elif command == 'help':
+        optParser.print_help()
+    elif command == 'listCommands':
+        print ', '.join(supportedCommands.keys())
 
     else:
         optParser.error("Unsupported command: {0}".format(command))
