@@ -71,11 +71,12 @@ class Package(object):
         if self.packageType == 'archive':
             self.sourceFile = config['sourceFile']
             self.installScript = config['installScript']
+            self.shortType = 'a'
         elif self.packageType == 'meta':
-            pass
+            self.shortType = 'm'
         elif self.packageType == 'git':
             # TODO
-            pass
+            self.shortType = 'g'
         else:
             raise ValueError("unknown package type {0.packageType}".format(self))
 
@@ -209,12 +210,20 @@ class PackageManager(object):
         return self._installedPackages
 
     def printAvailablePackages(self):
-        for p in sorted(self._availablePackages):
-            print self._availablePackages[p]
+        for p in sorted(self._availablePackages.values()):
+            if p.name in self._installedPackages:
+                installedVersion = self._installedPackages[p.name].version
+                print "i{0} {1} installed in version {2}".format(p.shortType, p, installedVersion)
+            else:
+                print " {0} {1} not installed".format(p.shortType, p)
 
     def printInstalledPackages(self):
-        for p in sorted(self._installedPackages):
-            print self._installedPackages[p]
+        for p in sorted(self._installedPackages.values()):
+            availableVersion = self._availablePackages[p.name].version
+            if p.version == availableVersion:
+                print "i{0} {1} up to date".format(p.shortType, p)
+            else:
+                print "i{0} {1} newer version available ({2})".format(p.shortType, p, availableVersion)
 
     def searchPackages(self, packageNames):
         foundPackages = []
@@ -229,9 +238,9 @@ class PackageManager(object):
         for fp in foundPackages:
             if fp.name in self._installedPackages:
                 installedVersion = self._installedPackages[fp.name].version
-                print "i {0} installed in version {1}".format(fp, installedVersion)
+                print "i{0} {1} installed in version {2}".format(fp.shortType, fp, installedVersion)
             else:
-                print "  {0} not installed".format(fp)
+                print " {0} {1} not installed".format(fp.shortType, fp)
 
     def installPackages(self, packageNames, reinstall=False, reinstallDependencies=False):
         """ Install the list of package names with dependencies.
