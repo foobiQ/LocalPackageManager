@@ -495,7 +495,7 @@ def main():
     elif command == 'help':
         optParser.print_help()
     elif command == 'listCommands':
-        print ', '.join((c[0] for c in supportedCommands))
+        print ' '.join((c[0] for c in supportedCommands))
 
     else:
         optParser.error("Unsupported command: {0}".format(command))
