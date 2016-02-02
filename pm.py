@@ -14,7 +14,6 @@ from urllib2 import urlopen, HTTPError
 from urlparse import urljoin
 import re
 import warnings
-from collections import OrderedDict
 
 
 _emptyConfig = {'packageManagerDir': '~/local/packageManager',
@@ -410,7 +409,7 @@ class PackageManager(object):
 
 def main():
     # define supported commands
-    supportedCommands = OrderedDict([
+    supportedCommands = [
             ('install', 'install the provided list of packages'),
             ('update', 'update the available package list'),
             ('upgrade', 'update all installed packages to the available version'),
@@ -420,12 +419,12 @@ def main():
             ('search', 'search for a given list of packages'),
             ('listCommands', 'list the possible commands and exit'),
             ('help', 'show this help message and exit'),
-            ])
+    ]
     usage = ("usage: %prog [options] command [package [package] ...]\n"
               "\n"
               "command can be one of:\n")
-    maxCmdLen = max(map(len, supportedCommands.keys()))
-    for cmd, desc in supportedCommands.items():
+    maxCmdLen = max((len(c[0]) for c in supportedCommands))
+    for cmd, desc in supportedCommands:
         usage += ("  {0:<"+str(maxCmdLen)+"}  {1}\n").format(cmd, desc)
 
     # configure program options
@@ -496,7 +495,7 @@ def main():
     elif command == 'help':
         optParser.print_help()
     elif command == 'listCommands':
-        print ', '.join(supportedCommands.keys())
+        print ', '.join((c[0] for c in supportedCommands))
 
     else:
         optParser.error("Unsupported command: {0}".format(command))
