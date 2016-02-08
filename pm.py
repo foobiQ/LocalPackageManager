@@ -380,7 +380,11 @@ class PackageManager(object):
     def upgradeInstalledPackages(self):
         packagesToUpgrade = []
         for installedPackage in self._installedPackages.values():
-            availablePackage = self._availablePackages[installedPackage.name]
+            try:
+                availablePackage = self._availablePackages[installedPackage.name]
+            except KeyError:
+                print "{0} is deprecated, not upgrading it".format(installedPackage.name)
+                continue
             if availablePackage.version > installedPackage.version:
                 packagesToUpgrade.append(installedPackage)
         # reinstall installed packages that depend on the packages to be upgraded
