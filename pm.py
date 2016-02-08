@@ -209,7 +209,7 @@ class PackageManager(object):
         return self._installedPackages
 
     def printAvailablePackages(self):
-        for p in sorted(self._availablePackages.values()):
+        for p in sorted(self._availablePackages.values(), key=lambda p: p.name):
             if p.name in self._installedPackages:
                 installedVersion = self._installedPackages[p.name].version
                 print "i{0} {1} installed in version {2}".format(p.shortType, p, installedVersion)
@@ -217,7 +217,7 @@ class PackageManager(object):
                 print " {0} {1} not installed".format(p.shortType, p)
 
     def printInstalledPackages(self):
-        for p in sorted(self._installedPackages.values()):
+        for p in sorted(self._installedPackages.values(), key=lambda p: p.name):
             try:
                 availableVersion = self._availablePackages[p.name].version
                 if p.version == availableVersion:
@@ -237,7 +237,7 @@ class PackageManager(object):
                     foundPackages.append(foundPackage)
 
         # print and check if any of them are already installed
-        for fp in foundPackages:
+        for fp in sorted(foundPackages, key=lambda p: p.name):
             if fp.name in self._installedPackages:
                 installedVersion = self._installedPackages[fp.name].version
                 print "i{0} {1} installed in version {2}".format(fp.shortType, fp, installedVersion)
