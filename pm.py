@@ -244,7 +244,7 @@ class PackageManager(object):
             else:
                 print " {0} {1} not installed".format(fp.shortType, fp)
 
-    def installPackages(self, packageNames, reinstall=False, reinstallDependencies=False):
+    def installPackages(self, packageNames, reinstall=False, reinstallDependencies=False, upgrade=False):
         """ Install the list of package names with dependencies.
 
         """
@@ -258,8 +258,8 @@ class PackageManager(object):
             if package in packagesToInstall:
                 continue
             # ignore and warn if already installed
-            # if reinstall is True don't check if the packet is already installed
-            if not reinstall and packageName in self._installedPackages.keys():
+            # if reinstall or upgrade is True don't check if the packet is already installed
+            if not reinstall and not upgrade and packageName in self._installedPackages.keys():
                 installedPackage = self._installedPackages[packageName]
                 print "Package '{0.name}' is already installed in version {0.version}.".format(installedPackage)
                 if package.version > installedPackage.version:
@@ -273,7 +273,8 @@ class PackageManager(object):
                         packagesToInstall = [p] + packagesToInstall
                     elif p.name in self._installedPackages:
                         installedPackage = self._installedPackages[p.name]
-                        if p.version > installedPackage.version:
+                        # only complain about newer dependencies versions if not in upgrade mode
+                        if p.version > installedPackage.version and not upgrade:
                             print "Newer version ({0.version}) is available for {0.name}. Please do update first.".format(p)
                             return
                     else:
@@ -399,7 +400,7 @@ class PackageManager(object):
         # reverse package list to update deepest dependency first and reinstall depending packages afterwards
         packageNamesToReinstall.reverse()
         # install them
-        self.installPackages(packageNamesToReinstall, reinstall=True)
+        self.installPackages(packageNamesToReinstall, upgrade=True)
 
     def selfUpgrade(self):
         print "Downloading package manager from server"
